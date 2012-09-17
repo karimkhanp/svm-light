@@ -26,9 +26,11 @@ using namespace std;
 class SVM_light
 {
 public:
-    explicit SVM_light(char* model_file);
+    SVM_light();
+    SVM_light(const char* model_file);
     ~SVM_light();
 public:
+    void setModel(const char* model_file);
     void train(FILE* train_file);
     void classify(FILE* test_file, FILE* pred_file);
     double classify(const vector<float>& feature);

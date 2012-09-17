@@ -16,10 +16,20 @@
 
 using namespace std;
 
-SVM_light::SVM_light(char* model_f)
+SVM_light::SVM_light()
+{
+    init();
+}
+
+SVM_light::SVM_light(const char* model_f)
 {
     strcpy(modelfile, model_f);
     init();
+}
+
+void SVM_light::setModel(const char* model_f)
+{
+    strcpy(modelfile, model_f);
 }
 
 SVM_light::~SVM_light()
@@ -87,22 +97,22 @@ void SVM_light::train(FILE* train_file)
     {
         fprintf(stderr, "Start classification\n");
         svm_learn_classification(docs, target, totdoc, totwords, l_parm, k_parm,
-                                 kernel_cache, _model, alpha_in);
+                kernel_cache, _model, alpha_in);
     }
     else if (l_parm->type == REGRESSION)
     {
         svm_learn_regression(docs, target, totdoc, totwords, l_parm, k_parm,
-                             &kernel_cache, _model);
+                &kernel_cache, _model);
     }
     else if (l_parm->type == RANKING)
     {
         svm_learn_ranking(docs, target, totdoc, totwords, l_parm, k_parm,
-                          &kernel_cache, _model);
+                &kernel_cache, _model);
     }
     else if (l_parm->type == OPTIMIZATION)
     {
         svm_learn_optimization(docs, target, totdoc, totwords, l_parm, k_parm,
-                               kernel_cache, _model, alpha_in);
+                kernel_cache, _model, alpha_in);
     }
 
     if (kernel_cache)
@@ -176,7 +186,7 @@ void SVM_light::classify(FILE* docfl, FILE* predfl)
         if (line[0] == '#')
             continue;
         parse_document(line, words, &doc_label, &queryid, &slackid, &costfactor,
-                       &wnum, max_words_doc, &comment);
+                &wnum, max_words_doc, &comment);
         totdoc++;
         if (model->kernel_parm.kernel_type == 0)
         {
@@ -186,7 +196,7 @@ void SVM_light::classify(FILE* docfl, FILE* predfl)
                     (words[j]).wnum = 0;
             }
             doc = create_example(-1, 0, 0, 0.0,
-                                 create_svector(words, comment, 1.0));
+                    create_svector(words, comment, 1.0));
             t1 = get_runtime();
             dist = classify_example_linear(model, doc);
             runtime += (get_runtime() - t1);
@@ -195,7 +205,7 @@ void SVM_light::classify(FILE* docfl, FILE* predfl)
         else
         {
             doc = create_example(-1, 0, 0, 0.0,
-                                 create_svector(words, comment, 1.0));
+                    create_svector(words, comment, 1.0));
             t1 = get_runtime();
             dist = classify_example(model, doc);
             runtime += (get_runtime() - t1);
@@ -264,7 +274,8 @@ void SVM_light::classify(FILE* docfl, FILE* predfl)
     }
     if ((!no_accuracy) && (verbosity >= 1))
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "Accuracy on test set: %.2f%% (%ld correct, %ld incorrect, %ld total)\n",
                 (float) (correct) * 100.0 / totdoc, correct, incorrect, totdoc);
 
@@ -272,7 +283,6 @@ void SVM_light::classify(FILE* docfl, FILE* predfl)
                 (float) (res_a) * 100.0 / (res_a + res_b),
                 (float) (res_a) * 100.0 / (res_a + res_c));
     }
-
 }
 
 double SVM_light::classify(const vector<float>& feature)
@@ -280,20 +290,23 @@ double SVM_light::classify(const vector<float>& feature)
     if (model == NULL)
     {
         model = read_model(modelfile);
+        //long t1 = get_runtime();
+        if (model->kernel_parm.kernel_type == 0)
+        {
+            add_weight_vector_to_linear_model(model);
+        }
+        //long t2 = get_runtime();
+        //printf("add time: %f", (t2-t1)/100.0);
     }
 
     //fprintf(stderr, "Model loaded\n");
-
-    if (model->kernel_parm.kernel_type == 0)
-    {
-        add_weight_vector_to_linear_model(model);
-    }
 
     WORD *words = get_word_from_feature(feature);
 
     DOC* doc;
     double dist(0);
 
+    //t1 = get_runtime();
     if (model->kernel_parm.kernel_type == 0)
     {
         for (int j = 0; (words[j]).wnum != 0; j++)
@@ -311,6 +324,8 @@ double SVM_light::classify(const vector<float>& feature)
         dist = classify_example(model, doc);
         free_example(doc, 1);
     }
+    //t2 = get_runtime();
+    //printf("classify time: %f\n", (t2-t1)/100.0);
 
     free(words);
     words = NULL;
@@ -527,7 +542,8 @@ void SVM_light::init_param()
     }
     else
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nUnknown type '%s': Valid types are 'c' (classification), 'r' regession, and 'p' preference ranking.\n",
                 type);
         wait_any_key();
@@ -536,13 +552,15 @@ void SVM_light::init_param()
     }
     if ((l_parm->skip_final_opt_check) && (k_parm->kernel_type == LINEAR))
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nIt does not make sense to skip the final optimality check for linear kernels.\n\n");
         l_parm->skip_final_opt_check = 0;
     }
     if ((l_parm->skip_final_opt_check) && (l_parm->remove_inconsistent))
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nIt is necessary to do the final optimality check when removing inconsistent \nexamples.\n");
         wait_any_key();
         print_help();
@@ -550,7 +568,8 @@ void SVM_light::init_param()
     }
     if ((l_parm->svm_maxqpsize < 2))
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nMaximum size of QP-subproblems not in valid range: %ld [2..]\n",
                 l_parm->svm_maxqpsize);
         wait_any_key();
@@ -559,11 +578,13 @@ void SVM_light::init_param()
     }
     if ((l_parm->svm_maxqpsize < l_parm->svm_newvarsinqp))
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nMaximum size of QP-subproblems [%ld] must be larger than the number of\n",
                 l_parm->svm_maxqpsize);
 
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "new variables [%ld] entering the working set in each iteration.\n",
                 l_parm->svm_newvarsinqp);
 
@@ -574,7 +595,8 @@ void SVM_light::init_param()
     if (l_parm->svm_iter_to_shrink < 1)
     {
 
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nMaximum number of iterations for shrinking not in valid range: %ld [1,..]\n",
                 l_parm->svm_iter_to_shrink);
         wait_any_key();
@@ -590,7 +612,8 @@ void SVM_light::init_param()
     }
     if (l_parm->transduction_posratio > 1)
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nThe fraction of unlabeled examples to classify as positives must\n");
         fprintf(stderr, "be less than 1.0 !!!\n\n");
         wait_any_key();
@@ -615,11 +638,14 @@ void SVM_light::init_param()
     }
     if (l_parm->rho < 0)
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nThe parameter rho for xi/alpha-estimates and leave-one-out pruning must\n");
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "be greater than zero (typically 1.0 or 2.0, see T. Joachims, Estimating the\n");
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "Generalization Performance of an SVM Efficiently, ICML, 2000.)!\n\n");
         wait_any_key();
         print_help();
@@ -627,11 +653,14 @@ void SVM_light::init_param()
     }
     if ((l_parm->xa_depth < 0) || (l_parm->xa_depth > 100))
     {
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "\nThe parameter depth for ext. xi/alpha-estimates must be in [0..100] (zero\n");
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "for switching to the conventional xa/estimates described in T. Joachims,\n");
-        fprintf(stderr,
+        fprintf(
+                stderr,
                 "Estimating the Generalization Performance of an SVM Efficiently, ICML, 2000.)\n");
         wait_any_key();
         print_help();
@@ -662,9 +691,11 @@ void SVM_light::print_help() const
     fprintf(stderr, "         -?          -> this help\n");
     fprintf(stderr, "         -v [0..3]   -> verbosity level (default 1)\n");
     fprintf(stderr, "Learning options:\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -z {c,r,p}  -> select between classification (c), regression (r),\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        and preference ranking (p) (default classification)\n");
     fprintf(stderr,
             "         -c float    -> C: trade-off between training error\n");
@@ -673,41 +704,53 @@ void SVM_light::print_help() const
     fprintf(stderr,
             "         -w [0..]    -> epsilon width of tube for regression\n");
     fprintf(stderr, "                        (default 0.1)\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -j float    -> Cost: cost-factor, by which training errors on\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        positive examples outweight errors on negative\n");
     fprintf(stderr, "                        examples (default 1) (see [4])\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -b [0,1]    -> use biased hyperplane (i.e. x*w+b>0) instead\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        of unbiased hyperplane (i.e. x*w>0) (default 1)\n");
     fprintf(stderr,
             "         -i [0,1]    -> remove inconsistent training examples\n");
     fprintf(stderr, "                        and retrain (default 0)\n");
     fprintf(stderr, "Performance estimation options:\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -x [0,1]    -> compute leave-one-out estimates (default 0)\n");
     fprintf(stderr, "                        (see [5])\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -o ]0..2]   -> value of rho for XiAlpha-estimator and for pruning\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        leave-one-out computation (default 1.0) (see [2])\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -k [0..100] -> search depth for extended XiAlpha-estimator \n");
     fprintf(stderr, "                        (default 0)\n");
     fprintf(stderr, "Transduction options (see [3]):\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -p [0..1]   -> fraction of unlabeled examples to be classified\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        into the positive class (default is the ratio of\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        positive and negative examples in the training data)\n");
     fprintf(stderr, "Kernel options:\n");
     fprintf(stderr, "         -t int      -> type of kernel function:\n");
     fprintf(stderr, "                        0: linear (default)\n");
     fprintf(stderr, "                        1: polynomial (s a*b+c)^d\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        2: radial basis function exp(-gamma ||a-b||^2)\n");
     fprintf(stderr, "                        3: sigmoid tanh(s a*b + c)\n");
     fprintf(stderr,
@@ -722,78 +765,108 @@ void SVM_light::print_help() const
     fprintf(stderr,
             "         -u string   -> parameter of user defined kernel\n");
     fprintf(stderr, "Optimization options (see [1]):\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -q [2..]    -> maximum size of QP-subproblems (default 10)\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -n [2..q]   -> number of new variables entering the working set\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        in each iteration (default n = q). Set n<q to prevent\n");
     fprintf(stderr, "                        zig-zagging.\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -m [5..]    -> size of cache for kernel evaluations in MB (default 40)\n");
     fprintf(stderr, "                        The larger the faster...\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -e float    -> eps: Allow that error for termination criterion\n");
     fprintf(stderr,
             "                        [y [w*x+b] - 1] >= eps (default 0.001)\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -y [0,1]    -> restart the optimization from alpha values in file\n");
     fprintf(stderr,
             "                        specified by -a option. (default 0)\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -h [5..]    -> number of iterations a variable needs to be\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        optimal before considered for shrinking (default 100)\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -f [0,1]    -> do final optimality check for variables removed\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        by shrinking. Although this test is usually \n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        positive, there is no guarantee that the optimum\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        was found if the test is omitted. (default 1)\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -y string   -> if option is given, reads alphas from file with given\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        and uses them as starting point. (default 'disabled')\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -# int      -> terminate optimization, if no progress after this\n");
     fprintf(stderr,
             "                        number of iterations. (default 100000)\n");
     fprintf(stderr, "Output options:\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -l string   -> file to write predicted labels of unlabeled\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        examples into after transductive learning\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "         -a string   -> write all alphas to this file after learning\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "                        (in the same order as in the training set)\n");
     wait_any_key();
     fprintf(stderr, "\nMore details in:\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "[1] T. Joachims, Making Large-Scale SVM Learning Practical. Advances in\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "    Kernel Methods - Support Vector Learning, B. Sch�lkopf and C. Burges and\n");
     fprintf(stderr, "    A. Smola (ed.), MIT Press, 1999.\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "[2] T. Joachims, Estimating the Generalization performance of an SVM\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "    Efficiently. International Conference on Machine Learning (ICML), 2000.\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "[3] T. Joachims, Transductive Inference for Text Classification using Support\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "    Vector Machines. International Conference on Machine Learning (ICML),\n");
     fprintf(stderr, "    1999.\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "[4] K. Morik, P. Brockhausen, and T. Joachims, Combining statistical learning\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "    with a knowledge-based approach - A case study in intensive care  \n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "    monitoring. International Conference on Machine Learning (ICML), 1999.\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "[5] T. Joachims, Learning to Classify Text Using Support Vector\n");
-    fprintf(stderr,
+    fprintf(
+            stderr,
             "    Machines: Methods, Theory, and Algorithms. Dissertation, Kluwer,\n");
     fprintf(stderr, "    2002.\n\n");
 }
